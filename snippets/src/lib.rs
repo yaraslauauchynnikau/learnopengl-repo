@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use wgpu::wgc::instance;
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -15,11 +16,60 @@ use winit::platform::web::EventLoopExtWebSys;
 
 //stores state of the game
 pub struct State {
+    surface: wgpu::Surface<'static>,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
+    is_surface_configured: bool,
     window: Arc<Window>,
 }
 
 impl State {
     pub async fn new(window: Arc<Window>) -> anyhow::Result<Self> {
+        let size = window.inner_size();
+
+
+        // first thing to create with wgpu
+        // creates Adapters and Surfaces
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            #[cfg(not(target_arch = "wasm32"))]
+            backends: wgpu::Backends::PRIMARY,
+            #[cfg(target_arch = "wasm32")]
+            backends: wgpu::Backends::GL,
+            flags: Default::default(),
+            memory_budget_thresholds: Default::default(),
+            backend_options: Default::default(),
+            display: None,
+        });
+        
+        let surface = instance.create_surface(window.clone()).unwrap();
+        
+
+        // adapter is a handle for the actual graphics card
+        // can be used for receiving information about the graphics card,
+        // such as its name and what backend adapter does it use
+        // used to create Device and Queue
+
+        // request_adapter parameters:
+        //      power_preference has three variants:
+        //              None - power usage not considered
+        //              LowPower - picks adapter that favors battery life
+        //              HighPerformance - picks more performant one (and more power hungry)
+        //
+        //      compatible_surface - finds an adapter that can present on the
+        //                              supplied surface
+        //
+        //      force_fallback_adapter - forces wgpu to pick an adapter that
+        //                                  will work on all hardware.
+        //                              (usually meaning using "software" system
+        //                                  instead of hardware such as GPU)
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::default(),
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false,
+            })
+            .await?;
         Ok(Self {
             window,
         })
