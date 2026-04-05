@@ -1,11 +1,10 @@
 use crate::state::State;
 use std::sync::Arc;
 
-
 use winit::{
-    application::ApplicationHandler, event::*, event_loop::{ActiveEventLoop}, keyboard::{PhysicalKey}, window::Window
+    application::ApplicationHandler, event::*, event_loop::ActiveEventLoop, keyboard::PhysicalKey,
+    window::Window,
 };
-
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -36,11 +35,9 @@ impl App {
 
 // proxy variable is web-only
 
-
 // after App is created, we implement ApplicationHandler
 // this trait gives a variety of functions: key press, mouse movements,
 // lifecycle events
-
 
 // starting with resumed and user_event methods:
 impl ApplicationHandler<State> for App {
@@ -83,13 +80,11 @@ impl ApplicationHandler<State> for App {
             // proxy to send the results to the event loop
             if let Some(proxy) = self.proxy.take() {
                 wasm_bindgen_futures::spawn_local(async move {
-                    assert!(proxy
-                        .send_event(
-                            State::new(window)
-                                .await
-                                .expect("Unable to create canvas!")
-                        )
-                        .is_ok())
+                    assert!(
+                        proxy
+                            .send_event(State::new(window).await.expect("Unable to create canvas!"))
+                            .is_ok()
+                    )
                 });
             }
         }
@@ -117,7 +112,7 @@ impl ApplicationHandler<State> for App {
         _window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let state = match & mut self.state {
+        let state = match &mut self.state {
             Some(canvas) => canvas,
             None => return,
         };
@@ -146,7 +141,7 @@ impl ApplicationHandler<State> for App {
             } => state.handle_key(event_loop, code, key_state.is_pressed()),
             WindowEvent::CursorMoved { position, .. } => {
                 state.handle_mouse_moved(position);
-            },
+            }
             _ => {}
         }
     }

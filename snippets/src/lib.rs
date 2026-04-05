@@ -1,13 +1,9 @@
-mod state;
 mod app;
-
+mod shaders;
+mod state;
 use app::App;
 
-use winit::{
-    event_loop::{EventLoop}
-};
-
-
+use winit::event_loop::EventLoop;
 
 pub fn run() -> anyhow::Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
@@ -39,6 +35,6 @@ pub fn run() -> anyhow::Result<()> {
 pub fn run_web() -> Result<(), wasm_bindgen::JsValue> {
     console_error_panic_hook::set_once();
     run().unwrap_throw();
-    
+
     Ok(())
 }

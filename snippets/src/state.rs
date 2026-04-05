@@ -1,6 +1,11 @@
+use crate::shaders::{
+    FragmentShaderPayload, MultisamplePayload, PrimitivePayload, VertexShaderPayload,
+};
+use std::num::NonZero;
 use std::sync::Arc;
+use wgpu::{DepthStencilState, PipelineCache};
 use winit::{
-    dpi::PhysicalPosition, event_loop::{ActiveEventLoop}, keyboard::{KeyCode}, window::Window
+    dpi::PhysicalPosition, event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window,
 };
 
 //stores state of the game
@@ -31,10 +36,9 @@ impl State {
             backend_options: Default::default(),
             display: None,
         });
-        
+
         // part of the window where stuff is drawn
         let surface = instance.create_surface(window.clone()).unwrap();
-        
 
         // adapter is a handle for the actual graphics card
         // can be used for receiving information about the graphics card,
@@ -67,9 +71,7 @@ impl State {
             .enumerate_adapters(wgpu::Backends::all())
             .await
             .into_iter()
-            .filter(|adapter| {
-                adapter.is_surface_supported(&surface)
-            })
+            .filter(|adapter| adapter.is_surface_supported(&surface))
             .next()
             .unwrap();
 
@@ -92,7 +94,9 @@ impl State {
 
         let surface_caps = surface.get_capabilities(&adapter);
 
-        let surface_format = surface_caps.formats.iter()
+        let surface_format = surface_caps
+            .formats
+            .iter()
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
@@ -111,13 +115,13 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
 
-        let render_pipeline_layout = 
+        let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[],
                 immediate_size: 0,
             });
-        
+
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -144,7 +148,7 @@ impl State {
                 cull_mode: Some(wgpu::Face::Back),
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
-                conservative: false
+                conservative: false,
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState {
@@ -168,8 +172,8 @@ impl State {
                 r: 0.1,
                 g: 0.2,
                 b: 0.3,
-                a: 1.0
-            }
+                a: 1.0,
+            },
         })
     }
 
@@ -183,7 +187,7 @@ impl State {
     }
 
     pub fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
-        match(code, is_pressed) {
+        match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
             _ => {}
         }
@@ -194,7 +198,7 @@ impl State {
             r: position.x / self.config.width as f64,
             g: position.y / self.config.height as f64,
             b: 1.0,
-            a: 1.0
+            a: 1.0,
         }
     }
     pub fn render(&mut self) -> anyhow::Result<()> {
@@ -224,11 +228,15 @@ impl State {
             }
         };
 
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -258,7 +266,61 @@ impl State {
         Ok(())
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) {}
 
+    pub fn create_render_pipeline<'a>(
+        device: wgpu::Device,
+        render_pipeline_layout: wgpu::PipelineLayout,
+        label: Option<&'a str>,
+        depth_stensil: Option<DepthStencilState>,
+        multiview_mask: Option<NonZero<u32>>,
+        cache: Option<&'a PipelineCache>,
+
+        vertex_shader_payload: VertexShaderPayload,
+        fragment_shader_payload: FragmentShaderPayload,
+        primitive_payload: PrimitivePayload,
+        multisample_payload: MultisamplePayload,
+    ) -> anyhow::Result<wgpu::RenderPipeline> {
+        Ok(
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: label,
+                layout: Some(&render_pipeline_layout),
+
+                vertex: wgpu::VertexState {
+                    module: vertex_shader_payload.body.module,
+                    entry_point: vertex_shader_payload.body.entry_point,
+                    buffers: vertex_shader_payload.buffers,
+                    compilation_options: vertex_shader_payload.body.compilation_options,
+                },
+
+                fragment: Some(wgpu::FragmentState {
+                    module: fragment_shader_payload.body.module,
+                    entry_point: fragment_shader_payload.body.entry_point,
+                    targets: fragment_shader_payload.targets,
+                    compilation_options: fragment_shader_payload.body.compilation_options,
+                }),
+
+                primitive: wgpu::PrimitiveState {
+                    topology: primitive_payload.topology,
+                    strip_index_format: primitive_payload.strip_index_format,
+                    front_face: primitive_payload.front_face,
+                    cull_mode: primitive_payload.cull_mode,
+                    polygon_mode: primitive_payload.polygon_mode,
+                    unclipped_depth: primitive_payload.unclipped_depth,
+                    conservative: primitive_payload.conservative,
+                },
+
+                depth_stencil: depth_stensil,
+
+                multisample: wgpu::MultisampleState {
+                    count: multisample_payload.count,
+                    mask: multisample_payload.mask,
+                    alpha_to_coverage_enabled: multisample_payload.aplha_to_coverage_enabled,
+                },
+
+                multiview_mask: multiview_mask,
+                cache: cache,
+            }),
+        )
     }
 }
