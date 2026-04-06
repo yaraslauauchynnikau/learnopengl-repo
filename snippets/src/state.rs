@@ -1,9 +1,4 @@
-use crate::shaders::{
-    FragmentShaderPayload, MultisamplePayload, PrimitivePayload, VertexShaderPayload,
-};
-use std::num::NonZero;
 use std::sync::Arc;
-use wgpu::{DepthStencilState, PipelineCache};
 use winit::{
     dpi::PhysicalPosition, event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window,
 };
@@ -121,6 +116,8 @@ impl State {
                 bind_group_layouts: &[],
                 immediate_size: 0,
             });
+        
+        
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -267,60 +264,4 @@ impl State {
     }
 
     pub fn update(&mut self) {}
-
-    pub fn create_render_pipeline<'a>(
-        device: wgpu::Device,
-        render_pipeline_layout: wgpu::PipelineLayout,
-        label: Option<&'a str>,
-        depth_stensil: Option<DepthStencilState>,
-        multiview_mask: Option<NonZero<u32>>,
-        cache: Option<&'a PipelineCache>,
-
-        vertex_shader_payload: VertexShaderPayload,
-        fragment_shader_payload: FragmentShaderPayload,
-        primitive_payload: PrimitivePayload,
-        multisample_payload: MultisamplePayload,
-    ) -> anyhow::Result<wgpu::RenderPipeline> {
-        Ok(
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: label,
-                layout: Some(&render_pipeline_layout),
-
-                vertex: wgpu::VertexState {
-                    module: vertex_shader_payload.body.module,
-                    entry_point: vertex_shader_payload.body.entry_point,
-                    buffers: vertex_shader_payload.buffers,
-                    compilation_options: vertex_shader_payload.body.compilation_options,
-                },
-
-                fragment: Some(wgpu::FragmentState {
-                    module: fragment_shader_payload.body.module,
-                    entry_point: fragment_shader_payload.body.entry_point,
-                    targets: fragment_shader_payload.targets,
-                    compilation_options: fragment_shader_payload.body.compilation_options,
-                }),
-
-                primitive: wgpu::PrimitiveState {
-                    topology: primitive_payload.topology,
-                    strip_index_format: primitive_payload.strip_index_format,
-                    front_face: primitive_payload.front_face,
-                    cull_mode: primitive_payload.cull_mode,
-                    polygon_mode: primitive_payload.polygon_mode,
-                    unclipped_depth: primitive_payload.unclipped_depth,
-                    conservative: primitive_payload.conservative,
-                },
-
-                depth_stencil: depth_stensil,
-
-                multisample: wgpu::MultisampleState {
-                    count: multisample_payload.count,
-                    mask: multisample_payload.mask,
-                    alpha_to_coverage_enabled: multisample_payload.aplha_to_coverage_enabled,
-                },
-
-                multiview_mask: multiview_mask,
-                cache: cache,
-            }),
-        )
-    }
 }
